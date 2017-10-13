@@ -1,37 +1,33 @@
 //
-//  GameScene.swift
+//  Level1Scene.swift
 //  BeavisMorgan
 //
-//  Created by Selvamurugan on 11/11/16.
+//  Created by Selvamurugan on 17/11/16.
 //  Copyright © 2016 Bosco Soft. All rights reserved.
 //
 
 import SpriteKit
 import AVFoundation
 
-let StartCategoryName = "Start"
-
-let CharacterCategory   : UInt32 = 0x1 << 0
-let BottomCategory : UInt32 = 0x1 << 1
-let ToolKitCategory  : UInt32 = 0x1 << 2
-let TreasureCategory  : UInt32 = 0x1 << 2
-
-class GameScene: SKScene, SKPhysicsContactDelegate, AVSpeechSynthesizerDelegate {
+class Level2Scene: SKScene, SKPhysicsContactDelegate, AVSpeechSynthesizerDelegate {
     
     private var bottom : SKNode!
     private var character : SKSpriteNode!
+    private var specialist : SKSpriteNode!
     private var ground1 : SKSpriteNode!
     private var ground2 : SKSpriteNode!
     private var checkPoint : SKSpriteNode!
     private var securityGaurd : SKSpriteNode!
-    private var toolKit : SKSpriteNode!
     private var dialogue : SKSpriteNode!
+    private var treasure : SKSpriteNode!
     private var start : SKSpriteNode!
     private var startBackground : SKSpriteNode!
     private var dangerBoard : SKSpriteNode!
     private var hmrcBoard : SKSpriteNode!
     private var groundTexture : SKTexture!
     private var moveBackGround : SKAction!
+    private var moveCheckPoint : SKAction!
+    private var moveSecurityGaurd : SKAction!
     private var synthesizer: AVSpeechSynthesizer!
     
     private var gameStarted: Bool = false
@@ -57,6 +53,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, AVSpeechSynthesizerDelegate 
         synthesizer.delegate = self
         addGround()
         addCharacter()
+        addSpecalist()
         addBottom()
         addStartButtons()
         let audio = SKAudioNode(fileNamed: "Background.mp3")
@@ -81,7 +78,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate, AVSpeechSynthesizerDelegate 
     
     func addGround() {
         // Create ground
-        groundTexture = SKTexture(imageNamed: "Ground.jpg")
+        groundTexture = SKTexture(imageNamed: "Ground1.jpg")
         groundTexture.filteringMode = SKTextureFilteringMode.nearest
         let moveGroundSprite = SKAction.moveBy(x: -self.frame.size.width, y: 0, duration: Double(CGFloat(0.015) * self.frame.size.width))
         let resetGroundSprite = SKAction.moveBy(x: self.frame.size.width, y: 0, duration: 0)
@@ -111,6 +108,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate, AVSpeechSynthesizerDelegate 
         self.addChild(character)
     }
     
+    func addSpecalist() {
+        let specialistTexture = SKTexture(imageNamed: "s3.png")
+        specialist = SKSpriteNode(texture: specialistTexture)
+        specialist.setScale(0.2)
+        specialist.position = CGPoint(x: self.frame.size.width / 4 + 40, y: self.frame.size.height / 3.85)
+        specialist.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: (specialist.size.width), height: (specialist.size.height)))
+        specialist.physicsBody?.isDynamic = true
+        specialist.physicsBody?.allowsRotation = false
+        specialist.physicsBody?.categoryBitMask = CharacterCategory
+        specialist.physicsBody?.contactTestBitMask = BottomCategory
+        self.addChild(specialist)
+    }
+    
     func addStartButtons() {
         characterStop()
         
@@ -131,6 +141,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate, AVSpeechSynthesizerDelegate 
         let characterAnim = SKAction.repeatForever(characterMove)
         character.run(characterAnim)
         character.isPaused = false
+        let specialistMove = SKAction.animate(with: self.specialistTextures(), timePerFrame: 0.13)
+        let specialistAnim = SKAction.repeatForever(specialistMove)
+        specialist.run(specialistAnim)
+        specialist.isPaused = false
         ground1.isPaused = false
         ground2.isPaused = false
         stopAction = false
@@ -147,6 +161,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate, AVSpeechSynthesizerDelegate 
     func characterStop() {
         character.texture = SKTexture(imageNamed: "c4.png")
         character.isPaused = true
+        specialist.texture = SKTexture(imageNamed: "s3.png")
+        specialist.isPaused = true
         ground1.isPaused = true
         ground2.isPaused = true
         stopAction = true
@@ -163,26 +179,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate, AVSpeechSynthesizerDelegate 
     func characterTextures() -> [SKTexture] {
         return [SKTexture(imageNamed: "c1"), SKTexture(imageNamed: "c2"), SKTexture(imageNamed: "c3"), SKTexture(imageNamed: "c4"), SKTexture(imageNamed: "c5"), SKTexture(imageNamed: "c6"), SKTexture(imageNamed: "c7"), SKTexture(imageNamed: "c8")]
     }
+
+    func specialistTextures() -> [SKTexture] {
+        return [SKTexture(imageNamed: "s1.png"), SKTexture(imageNamed: "s2.png"), SKTexture(imageNamed: "s3.png"), SKTexture(imageNamed: "s4.png"), SKTexture(imageNamed: "s5.png"), SKTexture(imageNamed: "s6.png"), SKTexture(imageNamed: "s7.png"), SKTexture(imageNamed: "s8.png")]
+    }
     
     // Check Point
-    
-    func throwToolKit() {
-        let toolKitTexture = SKTexture(imageNamed: "ToolKit.png")
-        toolKitTexture.filteringMode = SKTextureFilteringMode.nearest
-        toolKit = SKSpriteNode(texture: toolKitTexture, size: self.size)
-        toolKit.setScale(0.05)
-        toolKit.position = CGPoint(x: self.frame.size.width, y: self.frame.size.height / 5)
-        toolKit.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: toolKit.size.width, height: toolKit.size.height))
-        toolKit.physicsBody?.isDynamic = true
-        toolKit.physicsBody?.allowsRotation = false
-        toolKit.physicsBody?.categoryBitMask = ToolKitCategory
-        toolKit.physicsBody?.contactTestBitMask = CharacterCategory
-        bottom.physicsBody?.collisionBitMask = 0
-        let moveAction = SKAction.moveBy(x: -self.frame.size.width - 100, y: 0, duration: 5)
-        let removeAction = SKAction.removeFromParent()
-        toolKit.run(SKAction.sequence([moveAction, removeAction]))
-        self.addChild(toolKit)
-    }
     
     func throwCheckPoint() {
         let checkPointTexture = SKTexture(imageNamed: "ClosedGate.png")
@@ -229,30 +231,81 @@ class GameScene: SKScene, SKPhysicsContactDelegate, AVSpeechSynthesizerDelegate 
     func reachedCheckPoint() {
         characterStop()
         stopScene = true
-        showInstruction(message: "Reached Check Point")
+        showInstruction(message: "Reached Check Point 2")
         askQuestion()
     }
     
     func askQuestion() {
         characterStop()
         self.run(SKAction.sequence([SKAction.wait(forDuration: 3), SKAction.run {
-            self.showDialogue(name: "Q1.png", position: self.securityGaurd.position)
-            self.speakDialogue("What is your aim?", voice: "en-GB")
+            self.showDialogue(name: "Q14.png", position: self.securityGaurd.position)
+            self.speakDialogue("Under how many heads the income of a taxpayer is classified?", voice: "en-GB")
+            }, SKAction.wait(forDuration: 5), SKAction.run {
+                self.showDialogue(name: "Q15.png", position: self.character.position)
+                self.speakDialogue("Section 14 of the income tax act has classified the income of a taxpayer under five different heads of income.", voice: "en-GB")
+            }, SKAction.wait(forDuration: 8), SKAction.run {
+                self.showDialogue(name: "Q5.png", position: self.securityGaurd.position)
+                self.speakDialogue("You can pass checkpoint.", voice: "en-GB")
             }, SKAction.wait(forDuration: 3), SKAction.run {
-                self.showDialogue(name: "Q2.png", position: self.character.position)
-                self.speakDialogue("I dont know.", voice: "en-GB")
-            }, SKAction.wait(forDuration: 3), SKAction.run {
-                self.showDialogue(name: "Q3.png", position: self.securityGaurd.position)
-                self.speakDialogue("Sorry, please get help from R&D Tax Specialist.", voice: "en-GB")
-            }, SKAction.wait(forDuration: 3), SKAction.run {
-                self.goToLevel1Scene()
+                self.pushCheckPoint()
             }]))
     }
     
-    func goToLevel1Scene() {
+    func getTreasure() {
+        stopScene = true
+        ground1.isPaused = true
+        ground2.isPaused = true
+        self.character.isPaused = false
+        self.specialist.isPaused = false
+        let goToNextAction = SKAction.moveBy(x: self.frame.size.width, y: 0, duration: 8)
+        self.character.run(goToNextAction)
+        self.specialist.run(goToNextAction)
+    }
+    
+    func pushCheckPoint() {
+        self.checkPoint.texture = SKTexture(imageNamed: "OpenedGate.png")
+        stopScene = false
+        characterWalk()
+        moveCheckPoint = SKAction.moveBy(x: -(self.frame.size.width + 100) / 2, y: 0, duration: Double(CGFloat(0.015) * (self.frame.size.width + 100) / 2))
+        checkPoint.run(SKAction.sequence([moveCheckPoint, SKAction.removeFromParent()]))
+        hmrcBoard.run(SKAction.sequence([moveCheckPoint, SKAction.removeFromParent()]))
+        securityGaurd.run(SKAction.sequence([moveCheckPoint, SKAction.removeFromParent(), SKAction.run {
+            self.throwTreasure()
+            }]))
+    }
+    
+    func throwTreasure() {
+        let treasureTexture = SKTexture(imageNamed: "GoldTreasure.png")
+        treasureTexture.filteringMode = SKTextureFilteringMode.nearest
+        treasure = SKSpriteNode(texture: treasureTexture)
+        treasure.setScale(0.1)
+        treasure.position = CGPoint(x: self.frame.size.width - 100, y: self.frame.size.height / 6)
+        treasure.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: treasure.size.width, height: treasure.size.height))
+        treasure.physicsBody?.isDynamic = true
+        treasure.physicsBody?.allowsRotation = false
+        treasure.physicsBody?.categoryBitMask = TreasureCategory
+        treasure.physicsBody?.contactTestBitMask = CharacterCategory
+        bottom.physicsBody?.collisionBitMask = 0
+        self.addChild(treasure)
+        self.getTreasure()
+    }
+    
+    func crossCheckPoint() {
+        self.checkPoint.texture = SKTexture(imageNamed: "OpenedGate.png")
+        self.character.isPaused = false
+        self.specialist.isPaused = false
+        let goToNextAction = SKAction.moveBy(x: self.frame.size.width, y: 0, duration: 8)
+        self.character.run(goToNextAction)
+        self.specialist.run(goToNextAction)
+        self.run(SKAction.sequence([SKAction.playSoundFileNamed("LevelUp.wav", waitForCompletion: true), SKAction.run {
+            self.goToEndScene()
+            }]))
+    }
+    
+    func goToEndScene() {
         self.removeAllActions()
         self.removeAllChildren()
-        let scene = Level1Scene(size: (self.view?.frame.size)!)
+        let scene = EndScene(size: (self.view?.frame.size)!)
         scene.scaleMode = .aspectFill
         view?.presentScene(scene)
     }
@@ -269,7 +322,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate, AVSpeechSynthesizerDelegate 
             ground1.run(moveBackGround)
             ground2.run(moveBackGround)
             characterWalk()
-            showInstruction(message: "Get ToolKit")
+            self.run(SKAction.sequence([SKAction.run {
+                self.showInstruction(message: "Level 2")
+                }, SKAction.wait(forDuration: 3), SKAction.run {
+                    self.showInstruction(message: "Cross the checkpoint 2 with the help of R&D Tax Specialist")
+                }]))
             gameStarted = true
         }else {
             if stopScene || !gameStarted {
@@ -310,21 +367,27 @@ class GameScene: SKScene, SKPhysicsContactDelegate, AVSpeechSynthesizerDelegate 
             firstBody = contact.bodyB
             secondBody = contact.bodyA
         }
-        if firstBody.categoryBitMask == CharacterCategory && secondBody.categoryBitMask == ToolKitCategory {
+        if firstBody.categoryBitMask == CharacterCategory && secondBody.categoryBitMask == TreasureCategory {
             let spark = SKEmitterNode(fileNamed: "Spark.sks")
-            spark?.position = self.toolKit.position
+            spark?.position = self.treasure.position
             spark?.run(SKAction.sequence([SKAction.wait(forDuration: 2), SKAction.removeFromParent()]))
             self.addChild(spark!)
-            self.toolKit.run(SKAction.removeFromParent())
+            self.treasure.run(SKAction.removeFromParent())
             self.run(SKAction.playSoundFileNamed("Reward.wav", waitForCompletion: true))
-            self.run(SKAction.sequence([SKAction.run {
-                self.showInstruction(message: "You got toolkit!")
-                }, SKAction.wait(forDuration: 4), SKAction.run {
-                    self.showInstruction(message: "Checkpoint is 10m ahead.")
+            self.run(SKAction.sequence([SKAction.wait(forDuration: 3), SKAction.run {
+                    let messageLabel = SKLabelNode(fontNamed: "Chalkduster")
+                    messageLabel.text = "You got treasure!"
+                    messageLabel.setScale(0.5)
+                    messageLabel.fontSize = 25
+                    messageLabel.fontColor = UIColor.black
+                    messageLabel.position = CGPoint(x: self.frame.midX, y: self.frame.midY)
+                    messageLabel.run(SKAction.scale(to: 0.8, duration: 3))
+                    self.addChild(messageLabel)
+                },SKAction.playSoundFileNamed("LevelUp.wav", waitForCompletion: true), SKAction.run {
+                    self.goToEndScene()
                 }]))
         }
     }
-
     
     // Delegate Methods
     
@@ -337,13 +400,26 @@ class GameScene: SKScene, SKPhysicsContactDelegate, AVSpeechSynthesizerDelegate 
             if lastTime < Int(currentTime) {
                 timeElapsed += 1
                 lastTime = Int(currentTime)
-                if timeElapsed == 4 {
-                    throwToolKit()
+                if timeElapsed == 6 {
+                    showDialogue(name: "Q10.png", position: character.position)
+                    self.speakDialogue("What is gross total income?", voice: "en-GB")
                 }
-                if timeElapsed == 8 {
+                if timeElapsed == 11 {
+                    showDialogue(name: "Q11.png", position: specialist.position)
+                    self.speakDialogue("Total income of a taxpayer from all the heads of income is referred to as gross total income.", voice: "en-US")
+                }
+                if timeElapsed == 17 {
+                    showDialogue(name: "Q12.png", position: character.position)
+                    self.speakDialogue("Can i claim deduction of personal expenses while computing the taxable income?", voice: "en-GB")
+                }
+                if timeElapsed == 23 {
+                    showDialogue(name: "Q13.png", position: specialist.position)
+                    self.speakDialogue("No, you cannot claim deduction of personal expenses while computing the taxable income.", voice: "en-US")
+                }
+                if timeElapsed == 24 {
                     throwDangerBoard()
                 }
-                if (timeElapsed == 15) {
+                if (timeElapsed == 30) {
                     throwCheckPoint()
                 }
             }
